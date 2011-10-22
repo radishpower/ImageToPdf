@@ -1,10 +1,14 @@
 package com.noname.imagetopdf;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
@@ -59,10 +63,17 @@ public class BasicCamera extends Activity {
 		public void onPictureTaken(byte[] data, Camera camera) {
 			FileOutputStream outStream = null;
 			try {
-				outStream = new FileOutputStream(String.format(
-						"/sdcard/%d.jpg", System.currentTimeMillis()));
-				outStream.write(data);
-				outStream.close();
+				// Now here the file is going to be done
+				InputStream is = new ByteArrayInputStream(data);
+				Bitmap bmp = BitmapFactory.decodeStream(is);
+				
+				ProcessImage decodechain = new ProcessImage(bmp);
+		        Bitmap ourData = decodechain.getBitmap();
+		        FileOutputStream out = new FileOutputStream(String.format(
+							"/sdcard/%d.jpg", System.currentTimeMillis()));
+		        ourData.compress(Bitmap.CompressFormat.JPEG, 90, out);
+				out.close();
+				
 				Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
