@@ -18,14 +18,21 @@ public class ProcessImage {
 	private Mat mGraySubmat = new Mat();
 	private Mat bwimg = new Mat();
 	private List<Point> corners = new ArrayList<Point>();
-	private int headervalue = 200;
-	private int[] results = new int[8];
 	
-	public Bitmap process(Mat mYuv, int width, int height, Mat output) {		
-		corners.clear();
-		for (int i=0; i<4; i++) {
-			corners.add(new Point(0,0));
-		}
+	public Bitmap process(Mat mRgba, int width, int height) {
+		Bitmap ourData = Bitmap.createBitmap(width, height,
+				Bitmap.Config.ARGB_8888);
+		Imgproc.cvtColor(mRgba, bwimg, Imgproc.COLOR_RGBA2GRAY, 4);
+		Imgproc.Canny(bwimg, bwimg, 80, 100);
+		
+		Imgproc.cvtColor(bwimg, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
+		
+		Utils.matToBitmap(mRgba, ourData);
+		return ourData;
+	}
+	
+	public Bitmap processIt(Mat mYuv, int width, int height, Mat output) {		
+		
 		
 		localYUV = mYuv.clone();
 		mGraySubmat = mYuv.submat(0, width, 0, height);

@@ -97,11 +97,12 @@ public class BasicCamera extends Activity {
 				tmp = Bitmap.createBitmap(tmp, 0, 0,
                         tmp.getWidth(), tmp.getHeight(), matrix, true);
 				tmp = JPEGtoRGB888(tmp);
-				
 				Mat mRgba = Utils.bitmapToMat(tmp);
-				Bitmap ourData = Bitmap.createBitmap(tmp.getWidth(), tmp.getHeight(),
-						Bitmap.Config.ARGB_8888);
-				Utils.matToBitmap(mRgba, ourData);
+				
+				//Bitmap ourData = Bitmap.createBitmap(tmp.getWidth(), tmp.getHeight(),
+				//		Bitmap.Config.ARGB_8888);
+				//Utils.matToBitmap(mRgba, ourData);
+				Bitmap ourData = processingobject.process(mRgba, tmp.getWidth(), tmp.getHeight());
 									
 				FileOutputStream out = new FileOutputStream(String.format(
 							"/sdcard/%d.jpg", System.currentTimeMillis()));
