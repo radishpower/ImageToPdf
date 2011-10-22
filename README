@@ -1,4 +1,4 @@
-ImagetoPDF is an Android app that allows you to scan documents into PDFs with oyour phone.
+ImagetoPDF is an Android app that allows you to scan documents into PDFs with your phone.
 Take a picture of your document (or anything really) and receive a PDF of your document, ready for email!
 
 imgtopdf.py : Flask python web server running the service
