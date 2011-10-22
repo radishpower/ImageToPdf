@@ -1,51 +1,103 @@
 package com.noname.imagetopdf;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.Matrix;
 
-/**
-* Created by IntelliJ IDEA.
-* User: gracewoo
-* Date: 10/3/11
-* Time: 2:19 PM
-* To change this template use File | Settings | File Templates.
-*/
 public class ProcessImage {
-    private Bitmap ourData;
+	private Mat localYUV = new Mat();
+	private Mat mRgba = new Mat();
+	private Mat mGraySubmat = new Mat();
+	private Mat bwimg = new Mat();
+	private List<Point> corners = new ArrayList<Point>();
+	private int headervalue = 200;
+	private int[] results = new int[8];
+	
+	public Bitmap process(Mat mYuv, int width, int height, Mat output) {		
+		corners.clear();
+		for (int i=0; i<4; i++) {
+			corners.add(new Point(0,0));
+		}
+		
+		localYUV = mYuv.clone();
+		mGraySubmat = mYuv.submat(0, width, 0, height);
+		List<Mat> contours = new ArrayList<Mat>();
+		Mat unused = new Mat();
+		
+		Imgproc.Canny(mGraySubmat, bwimg, 80, 100);
+		mGraySubmat = bwimg.clone();
+		Imgproc.findContours(mGraySubmat, contours, unused, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+		Mat approxCurve = new Mat();
+		Imgproc.cvtColor(bwimg, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
+		int count = 0;
+		for (int i=0; i<contours.size(); i++) {
+			double tmpval = Imgproc.contourArea(contours.get(i));
+			if (tmpval > 800) {
+				Imgproc.approxPolyDP(contours.get(i), approxCurve, tmpval*0.0001, true);
+				if (approxCurve.total() == 4) {
+					count = count + 1;
+					//Imgproc.drawContours(mRgba, contours, i, new Scalar(255, 0, 0, 255));
+					//Make sure that the smallest coordinate gets added to upper left
+					int tl = 0; int bl = 0; int br = 0; int tr = 0; 
+					int tmpmin = (int) (approxCurve.get(0, 0)[0]+approxCurve.get(0, 0)[1]);
+					int tmpmax = (int) (approxCurve.get(0, 0)[0]+approxCurve.get(0, 0)[1]);
+					for (int j=1; j<4; j++) {
+						if (((int) (approxCurve.get(j, 0)[0]+approxCurve.get(j, 0)[1])) < tmpmin) {
+							tl = j;
+							tmpmin = ((int) (approxCurve.get(j, 0)[0]+approxCurve.get(j, 0)[1]));
+						}
+						if (((int) (approxCurve.get(j, 0)[0]+approxCurve.get(j, 0)[1])) > tmpmax) {
+							br = j;
+							tmpmax = ((int) (approxCurve.get(j, 0)[0]+approxCurve.get(j, 0)[1]));
+						}
+					}
+					tmpmin = (int) (approxCurve.get(((tl+1)%4), 0)[1]-approxCurve.get((tl), 0)[1]);
+					tmpmax = (int) (approxCurve.get(((tl+7)%4), 0)[1]-approxCurve.get((tl), 0)[1]);
+					if (tmpmin > tmpmax) {
+					     tr = (tl+1)%4; bl = (tl+3)%4;
+					}
+					else {
+						tr = (tl+7)%4; bl=(tl+9)%4;
+					}
+					
+					corners.set(0, new Point(approxCurve.get(tl,0)[0], approxCurve.get(tl, 0)[1]));
+					corners.set(1, new Point(approxCurve.get(bl,0)[0], approxCurve.get(bl, 0)[1]));
+					corners.set(2, new Point(approxCurve.get(br,0)[0], approxCurve.get(br, 0)[1]));
+					corners.set(3, new Point(approxCurve.get(tr,0)[0], approxCurve.get(tr, 0)[1]));
+					
+					Imgproc.cvtColor(localYUV, mRgba, Imgproc.COLOR_YUV420sp2RGB, 4);	
+				}
+			}
+		}
+		Imgproc.cvtColor(localYUV, mRgba, Imgproc.COLOR_YUV420sp2RGB, 4);
+		Core.fillConvexPoly(mRgba, corners, new Scalar(0, 0, 128, 128));
+		
+		Bitmap ourData = null;
+		Utils.matToBitmap(mRgba, ourData);
+		return ourData;
+	}
+	
+	 // Takes the corners and remaps it to a rectangular figure
+    public Mat perspective_transform(Mat distorted, int width, int height) {
+            Mat transformMatrix = new Mat();
+            Mat result = new Mat();
+            List<Point> newcorners = new ArrayList<Point>();
+            newcorners.add(new Point(0,0));
+            newcorners.add(new Point(height,0));
+            newcorners.add(new Point(height,width));
+            newcorners.add(new Point(0,width));
 
-    public ProcessImage(Bitmap now)
-    {
-        //ourData = Bitmap.createBitmap(now.getWidth(), now.getHeight(), now.getConfig());
-        process(now);
-    }
+            transformMatrix = Imgproc.getPerspectiveTransform(corners, newcorners);
+            Imgproc.warpPerspective(distorted, result, transformMatrix, distorted.size());
 
-    public void process(Bitmap now) {
-        // for now just threshold the image
-        Matrix matrix = new Matrix();
-        matrix.postScale((float) 0.2, (float) 0.2);
-        matrix.postRotate(90);
-
-        ourData = Bitmap.createBitmap(now, 0, 0, now.getWidth(), now.getHeight(), matrix, true);
-
-        float[] result = new float[3];
-        for (int i=0; i<ourData.getWidth(); i++) {
-            for (int j=0; j<ourData.getHeight(); j++) {
-                int color = ourData.getPixel(i, j);
-                Color.colorToHSV(color, result);
-                int r = (color >> 16) & 0xff;
-                int g = (color >> 8) & 0xff;
-                int b = (color) & 0xff;
-                if ((r < 128) && (g < 128) && (b < 128) && (result[1] < 0.5)) {
-                    ourData.setPixel(i, j, Color.WHITE);
-                }
-                else ourData.setPixel(i, j, Color.BLACK);
-            }
-        }
-    }
-
-    public Bitmap getBitmap()
-    {
-        return ourData;
+            return result;
     }
 }

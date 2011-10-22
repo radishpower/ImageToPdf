@@ -7,6 +7,7 @@ import java.io.IOException;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ImageFormat;
 import android.graphics.Paint;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
@@ -59,6 +60,7 @@ class Preview extends SurfaceView implements SurfaceHolder.Callback {
 		// the preview.
 		Camera.Parameters parameters = camera.getParameters();
 		parameters.setPreviewSize(w, h);
+		parameters.setPictureFormat(ImageFormat.JPEG);
 		camera.setParameters(parameters);
 		camera.startPreview();
 	}
